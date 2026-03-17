@@ -9,25 +9,31 @@ const DEFAULT_EXPENSE_CATEGORIES = ['普货', '周边货物', '工资', '房租'
 
 // POST /auth/register
 router.post('/register', async (req, res) => {
-  const { email, password, shopName } = req.body;
+  const { phone, password, shopName } = req.body;
 
-  if (!email || !password || !shopName) {
-    return res.status(400).json({ error: '邮箱、密码和店铺名称均为必填项' });
+  if (!phone || !password || !shopName) {
+    return res.status(400).json({ error: '手机号、密码和店铺名称均为必填项' });
+  }
+  if (!/^1\d{10}$/.test(phone)) {
+    return res.status(400).json({ error: '请输入正确的手机号' });
   }
   if (password.length < 6) {
     return res.status(400).json({ error: '密码至少6位' });
   }
 
+  // Format phone to E.164 for Supabase
+  const phoneE164 = `+86${phone}`;
+
   // Create Supabase Auth user
   const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-    email,
+    phone: phoneE164,
     password,
-    email_confirm: true, // auto-confirm for development
+    phone_confirm: true, // auto-confirm for development
   });
 
   if (authError) {
-    if (authError.message.includes('already registered') || authError.code === 'email_exists') {
-      return res.status(409).json({ error: '该邮箱已被注册' });
+    if (authError.message.includes('already registered') || authError.message.includes('already been registered')) {
+      return res.status(409).json({ error: '该手机号已被注册' });
     }
     return res.status(400).json({ error: authError.message });
   }
@@ -67,16 +73,17 @@ router.post('/register', async (req, res) => {
 
 // POST /auth/login
 router.post('/login', async (req, res) => {
-  const { email, password } = req.body;
+  const { phone, password } = req.body;
 
-  if (!email || !password) {
-    return res.status(400).json({ error: '邮箱和密码均为必填项' });
+  if (!phone || !password) {
+    return res.status(400).json({ error: '手机号和密码均为必填项' });
   }
 
-  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+  const phoneE164 = `+86${phone}`;
+  const { data, error } = await supabase.auth.signInWithPassword({ phone: phoneE164, password });
 
   if (error) {
-    return res.status(401).json({ error: '邮箱或密码错误' });
+    return res.status(401).json({ error: '手机号或密码错误' });
   }
 
   // Fetch shop info for the response
@@ -92,7 +99,7 @@ router.post('/login', async (req, res) => {
     expiresAt: data.session.expires_at,
     user: {
       id: data.user.id,
-      email: data.user.email,
+      phone: data.user.phone,
     },
     shop: shop || null,
   });

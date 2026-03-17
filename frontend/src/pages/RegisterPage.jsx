@@ -4,13 +4,17 @@ import { api } from '../utils/api';
 
 export default function RegisterPage() {
   const navigate = useNavigate();
-  const [form, setForm] = useState({ email: '', password: '', shopName: '' });
+  const [form, setForm] = useState({ phone: '', password: '', shopName: '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    if (!/^1\d{10}$/.test(form.phone)) {
+      setError('请输入正确的手机号');
+      return;
+    }
     if (form.password.length < 6) {
       setError('密码至少6位');
       return;
@@ -47,13 +51,13 @@ export default function RegisterPage() {
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-600 mb-1.5">邮箱</label>
+          <label className="block text-sm font-medium text-gray-600 mb-1.5">手机号</label>
           <input
-            type="email"
+            type="tel"
             className="input-field"
-            placeholder="请输入邮箱"
-            value={form.email}
-            onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
+            placeholder="请输入手机号"
+            value={form.phone}
+            onChange={e => setForm(f => ({ ...f, phone: e.target.value }))}
             required
           />
         </div>

@@ -103,7 +103,7 @@ export default function SettingsPage() {
       <h1 className="text-xl font-bold text-gray-800 mb-4">我的设置</h1>
 
       {settings && (
-        <div className="text-sm text-gray-400 mb-4 text-center">{settings.account?.email}</div>
+        <div className="text-sm text-gray-400 mb-4 text-center">{settings.account?.phone}</div>
       )}
 
       {/* Shop name */}

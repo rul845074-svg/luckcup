@@ -6,7 +6,7 @@ import useAuthStore from '../store/authStore';
 export default function LoginPage() {
   const navigate = useNavigate();
   const setAuth = useAuthStore(s => s.setAuth);
-  const [form, setForm] = useState({ email: '', password: '' });
+  const [form, setForm] = useState({ phone: '', password: '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -36,13 +36,13 @@ export default function LoginPage() {
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label className="block text-sm font-medium text-gray-600 mb-1.5">邮箱</label>
+          <label className="block text-sm font-medium text-gray-600 mb-1.5">手机号</label>
           <input
-            type="email"
+            type="tel"
             className="input-field"
-            placeholder="请输入邮箱"
-            value={form.email}
-            onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
+            placeholder="请输入手机号"
+            value={form.phone}
+            onChange={e => setForm(f => ({ ...f, phone: e.target.value }))}
             required
           />
         </div>

@@ -30,7 +30,7 @@ router.get('/', async (req, res) => {
     expenseCategories: settings.expense_categories,
     updatedAt: settings.updated_at,
     account: {
-      email: req.user.email,
+      phone: req.user.phone,
     },
   });
 });
