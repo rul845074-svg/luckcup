@@ -18,7 +18,7 @@ export default function ProfitPage() {
         api.get(`/analysis/profit?month=${month}`),
         api.get(`/analysis/breakeven?month=${month}`),
       ]);
-      setProfit(p);
+      setProfit({ ...p, platformContributions: p.platformContributions || [] });
       setBreakeven(b);
     } catch (err) {
       setError(err.message);
@@ -105,20 +105,20 @@ export default function ProfitPage() {
           {/* Progress bar */}
           <div className="mb-4">
             <div className="flex justify-between text-sm text-gray-600 mb-1">
-              <span>当月进度（第{breakeven.currentDay}天）</span>
+              <span>当月进度（第{breakeven.currentDay || 0}天）</span>
               <span className={breakeven.isOnTrack ? 'text-profit' : 'text-loss'}>
-                {breakeven.progressRate}%
+                {breakeven.progressRate || 0}%
               </span>
             </div>
             <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
               <div
                 className={`h-full rounded-full transition-all ${breakeven.isOnTrack ? 'bg-profit' : 'bg-loss'}`}
-                style={{ width: `${Math.min(breakeven.progressRate, 100)}%` }}
+                style={{ width: `${Math.min(breakeven.progressRate || 0, 100)}%` }}
               />
             </div>
             <div className="flex justify-between text-xs text-gray-400 mt-1">
-              <span>已到账 ¥{breakeven.currentIncome.toFixed(2)}</span>
-              <span>应达 ¥{breakeven.expectedByNow.toFixed(2)}</span>
+              <span>已到账 ¥{(breakeven.currentIncome ?? 0).toFixed(2)}</span>
+              <span>应达 ¥{(breakeven.expectedByNow ?? 0).toFixed(2)}</span>
             </div>
           </div>
 
@@ -126,11 +126,11 @@ export default function ProfitPage() {
           <div className="bg-orange-50 rounded-xl p-3 mb-3">
             <div className="flex justify-between">
               <span className="text-sm text-gray-600">每月至少到账</span>
-              <span className="font-bold text-primary">¥{breakeven.breakevenMonthly.toFixed(2)}</span>
+              <span className="font-bold text-primary">¥{(breakeven.breakevenMonthly ?? 0).toFixed(2)}</span>
             </div>
             <div className="flex justify-between mt-1">
               <span className="text-sm text-gray-600">每天至少到账</span>
-              <span className="font-bold text-primary">¥{breakeven.breakevenDaily.toFixed(2)}</span>
+              <span className="font-bold text-primary">¥{(breakeven.breakevenDaily ?? 0).toFixed(2)}</span>
             </div>
           </div>
 
@@ -139,19 +139,19 @@ export default function ProfitPage() {
           <div className="space-y-1 text-sm">
             <div className="flex justify-between text-gray-600">
               <span>固定房租</span>
-              <span>¥{breakeven.costBreakdown.fixedRent.toFixed(2)}</span>
+              <span>¥{(breakeven.costBreakdown?.fixedRent ?? 0).toFixed(2)}</span>
             </div>
             <div className="flex justify-between text-gray-600">
               <span>工资</span>
-              <span>¥{breakeven.costBreakdown.laborCost.toFixed(2)}</span>
+              <span>¥{(breakeven.costBreakdown?.laborCost ?? 0).toFixed(2)}</span>
             </div>
             <div className="flex justify-between text-gray-600">
               <span>水电</span>
-              <span>¥{breakeven.costBreakdown.utilityCost.toFixed(2)}</span>
+              <span>¥{(breakeven.costBreakdown?.utilityCost ?? 0).toFixed(2)}</span>
             </div>
             <div className="flex justify-between text-gray-600">
               <span>采购（近3月均值）</span>
-              <span>¥{breakeven.costBreakdown.avgPurchaseCost.toFixed(2)}</span>
+              <span>¥{(breakeven.costBreakdown?.avgPurchaseCost ?? 0).toFixed(2)}</span>
             </div>
           </div>
         </div>

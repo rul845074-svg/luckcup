@@ -25,7 +25,11 @@ export default function OverviewPage() {
     setError('');
     try {
       const res = await api.get(`/analysis/monthly-overview?month=${month}`);
-      setData(res);
+      setData({
+        ...res,
+        platformBreakdown: res.platformBreakdown || [],
+        categoryBreakdown: res.categoryBreakdown || [],
+      });
     } catch (err) {
       setError(err.message);
     } finally {
@@ -67,16 +71,16 @@ export default function OverviewPage() {
           >
             <p className="text-sm opacity-80 mb-1">本月结余</p>
             <p className="text-4xl font-bold">
-              {data.isProfit ? '+' : ''}¥{data.balance.toFixed(2)}
+              {data.isProfit ? '+' : ''}¥{(data.balance ?? 0).toFixed(2)}
             </p>
             <div className="flex gap-6 mt-4 text-sm">
               <div>
                 <p className="opacity-70">总收入</p>
-                <p className="font-semibold">¥{data.totalIncome.toFixed(2)}</p>
+                <p className="font-semibold">¥{(data.totalIncome ?? 0).toFixed(2)}</p>
               </div>
               <div>
                 <p className="opacity-70">总支出</p>
-                <p className="font-semibold">¥{data.totalExpense.toFixed(2)}</p>
+                <p className="font-semibold">¥{(data.totalExpense ?? 0).toFixed(2)}</p>
               </div>
             </div>
           </div>
