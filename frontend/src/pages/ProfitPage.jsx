@@ -57,19 +57,19 @@ export default function ProfitPage() {
           <div className={`rounded-2xl p-6 mb-4 text-center ${profit.isProfit ? 'bg-profit/10' : 'bg-loss/10'}`}>
             <p className="text-gray-500 text-sm mb-2">{profit.isProfit ? '本月盈利' : '本月亏损'}</p>
             <p className={`text-5xl font-bold ${profit.isProfit ? 'text-profit' : 'text-loss'}`}>
-              {profit.isProfit ? '+' : ''}¥{profit.profit.toFixed(2)}
+              {profit.isProfit ? '+' : ''}¥{(profit.profit ?? 0).toFixed(2)}
             </p>
             <p className={`text-lg mt-2 font-medium ${profit.isProfit ? 'text-profit' : 'text-loss'}`}>
-              利润率 {profit.profitRate}%
+              利润率 {profit.profitRate ?? 0}%
             </p>
             <div className="flex justify-center gap-8 mt-4 text-sm text-gray-600">
               <div>
                 <p className="text-gray-400">总收入</p>
-                <p className="font-semibold">¥{profit.totalIncome.toFixed(2)}</p>
+                <p className="font-semibold">¥{(profit.totalIncome ?? 0).toFixed(2)}</p>
               </div>
               <div>
                 <p className="text-gray-400">总支出</p>
-                <p className="font-semibold">¥{profit.totalExpense.toFixed(2)}</p>
+                <p className="font-semibold">¥{(profit.totalExpense ?? 0).toFixed(2)}</p>
               </div>
             </div>
           </div>
@@ -85,10 +85,10 @@ export default function ProfitPage() {
                     <div key={item.platform} className="flex justify-between items-center">
                       <div>
                         <p className="text-sm text-gray-700">{item.platform}</p>
-                        <p className="text-xs text-gray-400">到账 ¥{item.income.toFixed(2)}</p>
+                        <p className="text-xs text-gray-400">到账 ¥{(item.income ?? 0).toFixed(2)}</p>
                       </div>
-                      <p className={`font-bold ${item.profit >= 0 ? 'text-profit' : 'text-loss'}`}>
-                        {item.profit >= 0 ? '+' : ''}¥{item.profit.toFixed(2)}
+                      <p className={`font-bold ${(item.profit ?? 0) >= 0 ? 'text-profit' : 'text-loss'}`}>
+                        {(item.profit ?? 0) >= 0 ? '+' : ''}¥{(item.profit ?? 0).toFixed(2)}
                       </p>
                     </div>
                   ))}

@@ -98,9 +98,9 @@ export default function OverviewPage() {
                   <div key={item.platform}>
                     <div className="flex justify-between text-sm mb-1">
                       <span className="text-gray-700">{item.platform}</span>
-                      <span className="font-medium">¥{item.amount.toFixed(2)} <span className="text-gray-400">({item.percentage}%)</span></span>
+                      <span className="font-medium">¥{(item.amount ?? 0).toFixed(2)} <span className="text-gray-400">({item.percentage ?? 0}%)</span></span>
                     </div>
-                    <ProgressBar pct={item.percentage} color="bg-primary" />
+                    <ProgressBar pct={item.percentage ?? 0} color="bg-primary" />
                   </div>
                 ))}
             </div>
@@ -119,9 +119,9 @@ export default function OverviewPage() {
                   <div key={item.category}>
                     <div className="flex justify-between text-sm mb-1">
                       <span className="text-gray-700">{item.category}</span>
-                      <span className="font-medium">¥{item.amount.toFixed(2)} <span className="text-gray-400">({item.percentage}%)</span></span>
+                      <span className="font-medium">¥{(item.amount ?? 0).toFixed(2)} <span className="text-gray-400">({item.percentage ?? 0}%)</span></span>
                     </div>
-                    <ProgressBar pct={item.percentage} color="bg-accent" />
+                    <ProgressBar pct={item.percentage ?? 0} color="bg-accent" />
                   </div>
                 ))}
             </div>
