@@ -56,3 +56,30 @@ CREATE TABLE IF NOT EXISTS expenses (
   KEY idx_shop_date (shop_id, date),
   FOREIGN KEY (shop_id) REFERENCES shops(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='支出表';
+
+-- 6. 后台补录表
+CREATE TABLE IF NOT EXISTS backend_entries (
+  id            VARCHAR(36)   NOT NULL PRIMARY KEY,
+  shop_id       VARCHAR(36)   NOT NULL COMMENT '关联 shops.id',
+  date          DATE          NOT NULL COMMENT '日期',
+  type          ENUM('income','expense') NOT NULL COMMENT '收入或支出',
+  category      VARCHAR(50)   NOT NULL COMMENT '后台类别名称',
+  amount        DECIMAL(10,2) NOT NULL COMMENT '金额',
+  note          VARCHAR(200)  DEFAULT '' COMMENT '备注',
+  original_name VARCHAR(100)  DEFAULT NULL COMMENT '原始名称（导入时保留）',
+  created_at    DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  KEY idx_shop_date (shop_id, date),
+  FOREIGN KEY (shop_id) REFERENCES shops(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='后台补录表';
+
+-- 7. 报货货品参考表
+CREATE TABLE IF NOT EXISTS purchase_items (
+  id           VARCHAR(36)   NOT NULL PRIMARY KEY,
+  shop_id      VARCHAR(36)   NOT NULL COMMENT '关联 shops.id',
+  name         VARCHAR(100)  NOT NULL COMMENT '货品名称',
+  category     VARCHAR(50)   DEFAULT NULL COMMENT '分类（原料/周边/包材）',
+  source_month VARCHAR(7)    DEFAULT NULL COMMENT '来源月份 YYYY-MM',
+  created_at   DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_shop_name (shop_id, name),
+  FOREIGN KEY (shop_id) REFERENCES shops(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='报货货品参考表';
