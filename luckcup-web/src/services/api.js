@@ -29,18 +29,50 @@ const post = (path, body) => request('POST', path, body);
 const put = (path, body) => request('PUT', path, body);
 const del = (path) => request('DELETE', path);
 
+async function download(path, filename) {
+  const token = localStorage.getItem('lc_token');
+  const res = await fetch(`${BASE_URL}${path}`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+
+  if (!res.ok) {
+    let message = '下载失败';
+    try {
+      const data = await res.json();
+      message = data.error || message;
+    } catch {
+      try {
+        message = await res.text();
+      } catch {
+        // ignore
+      }
+    }
+    throw new Error(message);
+  }
+
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
 // ===== Mock 数据 =====
 
 const MOCK_DAILY = {
-  '美团团购': 1200, '美团外卖': 2800, '淘宝闪购': 650,
-  '抖音团购': 1500, '小程序': 2200, '收银机': 1800,
+  '美团团购': 1200, '美团外卖': 2800, '外卖其他': 650,
+  '抖音团购': 1500, '小程序': 2200, '门店收银': 1800,
 };
 
 const MOCK_EXPENSES = [
-  { id: '1', category: '普货', amount: 8500, note: '2月第一批普货', date: '2026-02-15', is_auto: false },
+  { id: '1', category: '原料货品', amount: 8500, note: '2月第一批原料', date: '2026-02-15', is_auto: false },
   { id: '2', category: '水电', amount: 3200, note: '2月水电费', date: '2026-02-18', is_auto: false },
   { id: '3', category: '周边货物', amount: 450, note: '小零食补货', date: '2026-02-20', is_auto: false },
-  { id: '4', category: '突发支出', amount: 280, note: '换水龙头', date: '2026-02-22', is_auto: false },
+  { id: '4', category: '其他支出', amount: 280, note: '换水龙头', date: '2026-02-22', is_auto: false },
 ];
 
 // ===== Auth =====
@@ -82,13 +114,30 @@ export const incomeApi = {
           byPlatform: [
             { platform: '美团外卖', amount: 28000, percentage: 34.1 },
             { platform: '小程序', amount: 20000, percentage: 24.4 },
-            { platform: '收银机', amount: 15000, percentage: 18.3 },
+            { platform: '门店收银', amount: 15000, percentage: 18.3 },
             { platform: '美团团购', amount: 10000, percentage: 12.2 },
             { platform: '抖音团购', amount: 6000, percentage: 7.3 },
-            { platform: '淘宝闪购', amount: 3000, percentage: 3.7 },
+            { platform: '外卖其他', amount: 3000, percentage: 3.7 },
           ],
         })
       : get(`/income/monthly?month=${month}`),
+
+  getMonthlyDetails: (month) =>
+    USE_MOCK
+      ? Promise.resolve({
+          month,
+          items: [
+            { id: '1', date: `${month}-28`, platform: '门店收银', amount: 1492.62 },
+            { id: '2', date: `${month}-28`, platform: '美团外卖', amount: 632.18 },
+            { id: '3', date: `${month}-27`, platform: '小程序', amount: 428.30 },
+          ],
+        })
+      : get(`/income/monthly-details?month=${month}`),
+
+  remove: (id) =>
+    USE_MOCK
+      ? Promise.resolve({ success: true })
+      : del(`/income/${id}`),
 };
 
 // ===== 支出 =====
@@ -128,18 +177,18 @@ export const analysisApi = {
           incomeByPlatform: [
             { platform: '美团外卖', amount: 28000, percentage: 34.1 },
             { platform: '小程序', amount: 20000, percentage: 24.4 },
-            { platform: '收银机', amount: 15000, percentage: 18.3 },
+            { platform: '门店收银', amount: 15000, percentage: 18.3 },
             { platform: '美团团购', amount: 10000, percentage: 12.2 },
             { platform: '抖音团购', amount: 6000, percentage: 7.3 },
-            { platform: '淘宝闪购', amount: 3000, percentage: 3.7 },
+            { platform: '外卖其他', amount: 3000, percentage: 3.7 },
           ],
           expenseByCategory: [
-            { category: '普货', amount: 35000, percentage: 53.8 },
+            { category: '原料货品', amount: 35000, percentage: 53.8 },
             { category: '工资', amount: 15000, percentage: 23.1 },
             { category: '房租', amount: 8000, percentage: 12.3 },
             { category: '水电', amount: 3500, percentage: 5.4 },
             { category: '周边货物', amount: 2500, percentage: 3.8 },
-            { category: '突发支出', amount: 1000, percentage: 1.5 },
+            { category: '其他支出', amount: 1000, percentage: 1.5 },
           ],
         })
       : get(`/analysis/monthly-overview?month=${month}`),
@@ -163,6 +212,9 @@ export const analysisApi = {
     USE_MOCK
       ? Promise.resolve({ month, totalIncome: 82000, totalExpense: 65000, balance: 17000, profitRate: 20.7 })
       : get(`/analysis/profit?month=${month}`),
+
+  downloadMonthlyLedger: (month) =>
+    download(`/analysis/monthly-ledger-csv?month=${month}`, `luckcup-ledger-${month}.csv`),
 };
 
 // ===== 设置 =====
@@ -174,8 +226,8 @@ export const settingsApi = {
           shopId: 'mock_shop',
           shopName: 'LuckCup 万达店',
           fixedRent: 8000,
-          platforms: ['美团团购', '美团外卖', '淘宝闪购', '抖音团购', '小程序', '收银机'],
-          expenseCategories: ['普货', '周边货物', '工资', '房租', '水电', '突发支出'],
+          platforms: ['美团团购', '美团外卖', '外卖其他', '抖音团购', '小程序', '门店收银'],
+          expenseCategories: ['原料货品', '周边货物', '工资', '房租', '水电', '其他支出', '活动', '物业', '其他'],
         })
       : get('/settings'),
 
@@ -183,4 +235,22 @@ export const settingsApi = {
     USE_MOCK
       ? Promise.resolve({ success: true })
       : put('/settings', data),
+};
+
+// ===== 后台补录 =====
+
+export const backendEntriesApi = {
+  getCategories: () => get('/backend-entries/categories'),
+
+  getList: (month, type) => {
+    let path = `/backend-entries?month=${month}`;
+    if (type) path += `&type=${type}`;
+    return get(path);
+  },
+
+  add: (data) => post('/backend-entries', data),
+
+  update: (id, data) => put(`/backend-entries/${id}`, data),
+
+  remove: (id) => del(`/backend-entries/${id}`),
 };

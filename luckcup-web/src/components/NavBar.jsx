@@ -4,6 +4,7 @@ import { C } from '../constants/theme';
 const TABS = [
   { path: '/income', icon: '💰', label: '今日收入' },
   { path: '/expense', icon: '📝', label: '记支出' },
+  { path: '/backend', icon: '📥', label: '后台补录' },
   { path: '/overview', icon: '📊', label: '月度总览' },
   { path: '/analysis', icon: '📈', label: '盈亏分析' },
   { path: '/settings', icon: '⚙️', label: '设置' },
@@ -26,11 +27,11 @@ export default function NavBar() {
           <button key={t.path} onClick={() => navigate(t.path)} style={{
             background: 'none', border: 'none', cursor: 'pointer',
             display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
-            padding: '4px 0', minWidth: 56,
+            padding: '4px 0', minWidth: 48,
           }}>
             <span style={{ fontSize: 22 }}>{t.icon}</span>
             <span style={{
-              fontSize: 10, fontWeight: active ? 700 : 400,
+              fontSize: 9, fontWeight: active ? 700 : 400,
               color: active ? C.primary : C.textSec,
             }}>{t.label}</span>
             {active && (

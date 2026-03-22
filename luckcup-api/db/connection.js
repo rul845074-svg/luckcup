@@ -33,6 +33,21 @@ function getPool() {
   return pool;
 }
 
+function isRetrySafeQuery(sql) {
+  const normalized = String(sql || '')
+    .trim()
+    .replace(/^\(+/, '')
+    .toUpperCase();
+
+  return (
+    normalized.startsWith('SELECT')   ||
+    normalized.startsWith('SHOW')     ||
+    normalized.startsWith('DESCRIBE') ||
+    normalized.startsWith('DESC')     ||
+    normalized.startsWith('EXPLAIN')
+  );
+}
+
 // 判断是否为"连接已断开"类错误
 function isStaleError(err) {
   return (
@@ -65,7 +80,8 @@ async function query(sql, params) {
     const [rows] = await getPool().query(sql, params);
     return [rows];
   } catch (err) {
-    if (isStaleError(err)) {
+    // 只自动重试读查询，避免 INSERT/UPDATE/DELETE 在“服务端已执行但客户端断线”时被重复回放。
+    if (isStaleError(err) && isRetrySafeQuery(sql)) {
       await rebuildPool();
       const [rows] = await pool.query(sql, params);
       return [rows];
@@ -90,4 +106,4 @@ async function getConnection() {
   }
 }
 
-module.exports = { query, getConnection };
+module.exports = { query, getConnection, isStaleError };

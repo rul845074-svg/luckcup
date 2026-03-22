@@ -40,8 +40,8 @@ router.get('/', auth, async (req, res) => {
       shopName: shop.name,
       createdAt: shop.created_at,
       fixedRent: parseFloat(s.fixed_rent || 0),
-      platforms: parseSafe(s.platforms, ['美团团购', '美团外卖', '淘宝闪购', '抖音团购', '小程序', '收银机']),
-      expenseCategories: parseSafe(s.expense_categories, ['普货', '周边货物', '工资', '房租', '水电', '突发支出']),
+      platforms: parseSafe(s.platforms, ['美团团购', '美团外卖', '外卖其他', '抖音团购', '小程序', '门店收银']),
+      expenseCategories: parseSafe(s.expense_categories, ['原料货品', '周边货物', '工资', '房租', '水电', '其他支出', '活动', '物业', '其他']),
     });
   } catch (e) {
     console.error('[settings GET]', e);

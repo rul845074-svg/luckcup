@@ -7,8 +7,8 @@ const jwt = require('jsonwebtoken');
 const { v4: uuidv4 } = require('uuid');
 const db = require('../db/connection');
 
-const DEFAULT_PLATFORMS = ['美团团购', '美团外卖', '淘宝闪购', '抖音团购', '小程序', '收银机'];
-const DEFAULT_CATEGORIES = ['普货', '周边货物', '工资', '房租', '水电', '突发支出'];
+const DEFAULT_PLATFORMS = ['美团团购', '美团外卖', '外卖其他', '抖音团购', '小程序', '门店收银'];
+const DEFAULT_CATEGORIES = ['原料货品', '周边货物', '工资', '房租', '水电', '其他支出', '活动', '物业', '其他'];
 
 // POST /auth/register — 注册新账号
 router.post('/register', async (req, res) => {
@@ -37,7 +37,7 @@ router.post('/register', async (req, res) => {
     const name = shopName || 'LuckCup 我的店铺';
 
     // 顺序插入（不用事务，避免 Serverless 环境下 conn.rollback() 在断连时崩溃）
-    // 所有操作走 db.query()，内置断连重试；shop 失败时手动清理 user 记录
+    // 所有操作走 db.query()；仅读查询会自动断连重试，shop 失败时手动清理 user 记录
     await db.query(
       'INSERT INTO users (id, phone, password_hash) VALUES (?, ?, ?)',
       [userId, phone, passwordHash]

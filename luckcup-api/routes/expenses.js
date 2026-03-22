@@ -58,14 +58,38 @@ router.post('/', auth, async (req, res) => {
   }
   if (!req.shopId) return res.status(400).json({ error: '未找到店铺' });
 
+  const id = uuidv4();
+  const normalizedAmount = parseFloat(amount);
+  const normalizedNote = note.trim();
+
   try {
-    const id = uuidv4();
     await db.query(
       'INSERT INTO expenses (id, shop_id, date, category, amount, note) VALUES (?, ?, ?, ?, ?, ?)',
-      [id, req.shopId, date, category, parseFloat(amount), note.trim()]
+      [id, req.shopId, date, category, normalizedAmount, normalizedNote]
     );
     res.json({ success: true, id });
   } catch (e) {
+    if (e.code === 'ER_DUP_ENTRY' || db.isStaleError(e)) {
+      try {
+        const [rows] = await db.query(
+          'SELECT id, date, category, amount, note FROM expenses WHERE id=? AND shop_id=? LIMIT 1',
+          [id, req.shopId]
+        );
+        const existing = rows[0];
+        const sameDate = existing && (
+          (existing.date instanceof Date ? existing.date.toISOString().slice(0, 10) : existing.date) === date
+        );
+        const sameAmount = existing && Math.abs(parseFloat(existing.amount) - normalizedAmount) < 0.000001;
+        const sameNote = existing && existing.note === normalizedNote;
+        const sameCategory = existing && existing.category === category;
+
+        if (existing && sameDate && sameAmount && sameNote && sameCategory) {
+          return res.json({ success: true, id, recovered: true });
+        }
+      } catch (recoveryError) {
+        console.error('[expenses POST recovery]', recoveryError);
+      }
+    }
     console.error('[expenses POST]', e);
     res.status(500).json({ error: '保存失败' });
   }

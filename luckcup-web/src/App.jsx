@@ -6,6 +6,7 @@ import ExpensePage from './pages/ExpensePage';
 import OverviewPage from './pages/OverviewPage';
 import AnalysisPage from './pages/AnalysisPage';
 import SettingsPage from './pages/SettingsPage';
+import BackendEntryPage from './pages/BackendEntryPage';
 
 function RequireAuth({ children }) {
   const token = localStorage.getItem('lc_token');
@@ -31,6 +32,9 @@ export default function App() {
       } />
       <Route path="/expense" element={
         <RequireAuth><AppLayout><ExpensePage /></AppLayout></RequireAuth>
+      } />
+      <Route path="/backend" element={
+        <RequireAuth><AppLayout><BackendEntryPage /></AppLayout></RequireAuth>
       } />
       <Route path="/overview" element={
         <RequireAuth><AppLayout><OverviewPage /></AppLayout></RequireAuth>

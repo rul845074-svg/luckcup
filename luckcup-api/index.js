@@ -11,6 +11,7 @@ const incomeRoutes = require('./routes/income');
 const expensesRoutes = require('./routes/expenses');
 const analysisRoutes = require('./routes/analysis');
 const settingsRoutes = require('./routes/settings');
+const backendEntriesRoutes = require('./routes/backend-entries');
 
 const app = express();
 
@@ -31,6 +32,7 @@ app.use('/income', incomeRoutes);
 app.use('/expenses', expensesRoutes);
 app.use('/analysis', analysisRoutes);
 app.use('/settings', settingsRoutes);
+app.use('/backend-entries', backendEntriesRoutes);
 
 // 404
 app.use((req, res) => {

@@ -98,4 +98,56 @@ router.get('/monthly', auth, async (req, res) => {
   }
 });
 
+// GET /income/monthly-details?month=2026-02
+// 查询某月收入明细（按日、按平台）
+router.get('/monthly-details', auth, async (req, res) => {
+  const { month } = req.query;
+  if (!month) return res.status(400).json({ error: '缺少 month 参数（格式：YYYY-MM）' });
+  if (!req.shopId) return res.status(400).json({ error: '未找到店铺' });
+
+  try {
+    const [rows] = await db.query(
+      `SELECT id, date, platform, amount, created_at
+       FROM daily_income
+       WHERE shop_id = ? AND DATE_FORMAT(date, '%Y-%m') = ?
+       ORDER BY date DESC, amount DESC, created_at DESC`,
+      [req.shopId, month]
+    );
+
+    res.json({
+      month,
+      items: rows.map(r => ({
+        id: r.id,
+        date: r.date,
+        platform: r.platform,
+        amount: parseFloat(r.amount),
+        createdAt: r.created_at,
+      })),
+    });
+  } catch (e) {
+    console.error('[income/monthly-details]', e);
+    res.status(500).json({ error: '查询失败' });
+  }
+});
+
+// DELETE /income/:id
+// 删除一条收入记录
+router.delete('/:id', auth, async (req, res) => {
+  if (!req.shopId) return res.status(400).json({ error: '未找到店铺' });
+
+  try {
+    const [result] = await db.query(
+      'DELETE FROM daily_income WHERE id = ? AND shop_id = ?',
+      [req.params.id, req.shopId]
+    );
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: '记录不存在' });
+    }
+    res.json({ success: true });
+  } catch (e) {
+    console.error('[income DELETE]', e);
+    res.status(500).json({ error: '删除失败' });
+  }
+});
+
 module.exports = router;

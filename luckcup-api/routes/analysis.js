@@ -5,6 +5,15 @@ const router = express.Router();
 const auth = require('../middleware/auth');
 const db = require('../db/connection');
 
+function escapeCsv(value) {
+  if (value === null || value === undefined) return '';
+  const text = String(value);
+  if (/[",\n]/.test(text)) {
+    return `"${text.replace(/"/g, '""')}"`;
+  }
+  return text;
+}
+
 // GET /analysis/monthly-overview?month=2026-02
 // 月度总览：总收入、总支出、结余、各平台收入、各类别支出
 router.get('/monthly-overview', auth, async (req, res) => {
@@ -29,14 +38,28 @@ router.get('/monthly-overview', auth, async (req, res) => {
       [req.shopId, month]
     );
 
-    const totalIncome = incomeRows.reduce((s, r) => s + parseFloat(r.total), 0);
-    const totalExpense = expenseRows.reduce((s, r) => s + parseFloat(r.total), 0);
+    // 后台补录汇总
+    const [beIncome] = await db.query(
+      "SELECT IFNULL(SUM(amount),0) AS total FROM backend_entries WHERE shop_id=? AND type='income' AND DATE_FORMAT(date,'%Y-%m')=?",
+      [req.shopId, month]
+    );
+    const [beExpense] = await db.query(
+      "SELECT IFNULL(SUM(amount),0) AS total FROM backend_entries WHERE shop_id=? AND type='expense' AND DATE_FORMAT(date,'%Y-%m')=?",
+      [req.shopId, month]
+    );
+    const backendIncome = parseFloat(beIncome[0].total);
+    const backendExpense = parseFloat(beExpense[0].total);
+
+    const totalIncome = incomeRows.reduce((s, r) => s + parseFloat(r.total), 0) + backendIncome;
+    const totalExpense = expenseRows.reduce((s, r) => s + parseFloat(r.total), 0) + backendExpense;
 
     res.json({
       month,
       totalIncome,
       totalExpense,
       balance: totalIncome - totalExpense,
+      backendIncome,
+      backendExpense,
       incomeByPlatform: incomeRows.map(r => ({
         platform: r.platform,
         amount: parseFloat(r.total),
@@ -83,11 +106,11 @@ router.get('/breakeven', auth, async (req, res) => {
     let utility = await sumCategory(req.shopId, '水电', month);
     if (utility === 0) utility = await sumCategory(req.shopId, '水电', prevMonth);
 
-    // 近3个月采购成本均值（普货 + 周边货物）
+    // 近3个月采购成本均值（原料货品 + 周边货物）
     const prev3 = getPrevMonths(month, 3);
     let totalPurchase = 0;
     for (const m of prev3) {
-      const goods = await sumCategory(req.shopId, '普货', m);
+      const goods = await sumCategory(req.shopId, '原料货品', m);
       const sideline = await sumCategory(req.shopId, '周边货物', m);
       totalPurchase += goods + sideline;
     }
@@ -99,12 +122,16 @@ router.get('/breakeven', auth, async (req, res) => {
     const [yr, mo] = month.split('-').map(Number);
     const daysInMonth = new Date(yr, mo, 0).getDate();
 
-    // 当前月份已到账收入
+    // 当前月份已到账收入（前台 + 后台）
     const [incomeRows] = await db.query(
       "SELECT IFNULL(SUM(amount),0) AS total FROM daily_income WHERE shop_id=? AND DATE_FORMAT(date,'%Y-%m')=?",
       [req.shopId, month]
     );
-    const currentIncome = parseFloat(incomeRows[0].total);
+    const [beIncomeRows] = await db.query(
+      "SELECT IFNULL(SUM(amount),0) AS total FROM backend_entries WHERE shop_id=? AND type='income' AND DATE_FORMAT(date,'%Y-%m')=?",
+      [req.shopId, month]
+    );
+    const currentIncome = parseFloat(incomeRows[0].total) + parseFloat(beIncomeRows[0].total);
 
     res.json({
       month,
@@ -145,8 +172,18 @@ router.get('/profit', auth, async (req, res) => {
       [req.shopId, month]
     );
 
-    const totalIncome = incomeRows.reduce((s, r) => s + parseFloat(r.total), 0);
-    const totalExpense = parseFloat(expenseRows[0].total);
+    // 后台补录
+    const [beInc] = await db.query(
+      "SELECT IFNULL(SUM(amount),0) AS total FROM backend_entries WHERE shop_id=? AND type='income' AND DATE_FORMAT(date,'%Y-%m')=?",
+      [req.shopId, month]
+    );
+    const [beExp] = await db.query(
+      "SELECT IFNULL(SUM(amount),0) AS total FROM backend_entries WHERE shop_id=? AND type='expense' AND DATE_FORMAT(date,'%Y-%m')=?",
+      [req.shopId, month]
+    );
+
+    const totalIncome = incomeRows.reduce((s, r) => s + parseFloat(r.total), 0) + parseFloat(beInc[0].total);
+    const totalExpense = parseFloat(expenseRows[0].total) + parseFloat(beExp[0].total);
     const balance = totalIncome - totalExpense;
     const profitRate = totalIncome > 0
       ? parseFloat(((balance / totalIncome) * 100).toFixed(1))
@@ -173,6 +210,119 @@ router.get('/profit', auth, async (req, res) => {
   } catch (e) {
     console.error('[analysis/profit]', e);
     res.status(500).json({ error: '查询失败' });
+  }
+});
+
+// GET /analysis/monthly-ledger-csv?month=2026-02
+// 导出某月完整台账，便于 Excel / Numbers 查看与分析
+router.get('/monthly-ledger-csv', auth, async (req, res) => {
+  const { month } = req.query;
+  if (!month) return res.status(400).json({ error: '缺少 month 参数' });
+  if (!req.shopId) return res.status(400).json({ error: '未找到店铺' });
+
+  try {
+    const [incomeRows] = await db.query(
+      `SELECT id, date, platform, amount, created_at
+       FROM daily_income
+       WHERE shop_id=? AND DATE_FORMAT(date,'%Y-%m')=?
+       ORDER BY date DESC, platform ASC`,
+      [req.shopId, month]
+    );
+
+    const [expenseRows] = await db.query(
+      `SELECT id, date, category, amount, note, is_auto, created_at
+       FROM expenses
+       WHERE shop_id=? AND DATE_FORMAT(date,'%Y-%m')=?
+       ORDER BY date DESC, created_at DESC`,
+      [req.shopId, month]
+    );
+
+    const [backendRows] = await db.query(
+      `SELECT id, date, type, category, amount, note, original_name, created_at
+       FROM backend_entries
+       WHERE shop_id=? AND DATE_FORMAT(date,'%Y-%m')=?
+       ORDER BY date DESC, created_at DESC`,
+      [req.shopId, month]
+    );
+
+    const lines = [];
+    lines.push([
+      '月份',
+      '日期',
+      '来源表',
+      '录入方式',
+      '收支类型',
+      '系统类目',
+      '展示名称',
+      '原始名称',
+      '金额',
+      '备注',
+      '是否自动',
+      '记录ID',
+      '创建时间',
+    ].join(','));
+
+    incomeRows.forEach(row => {
+      lines.push([
+        month,
+        row.date,
+        'daily_income',
+        '前台',
+        '收入',
+        row.platform,
+        row.platform,
+        '',
+        parseFloat(row.amount).toFixed(2),
+        '',
+        '否',
+        row.id,
+        row.created_at,
+      ].map(escapeCsv).join(','));
+    });
+
+    expenseRows.forEach(row => {
+      lines.push([
+        month,
+        row.date,
+        'expenses',
+        '前台',
+        '支出',
+        row.category,
+        row.category,
+        '',
+        parseFloat(row.amount).toFixed(2),
+        row.note || '',
+        row.is_auto ? '是' : '否',
+        row.id,
+        row.created_at,
+      ].map(escapeCsv).join(','));
+    });
+
+    backendRows.forEach(row => {
+      lines.push([
+        month,
+        row.date,
+        'backend_entries',
+        '后台补录',
+        row.type === 'income' ? '收入' : '支出',
+        row.category,
+        row.category,
+        row.original_name || '',
+        parseFloat(row.amount).toFixed(2),
+        row.note || '',
+        '否',
+        row.id,
+        row.created_at,
+      ].map(escapeCsv).join(','));
+    });
+
+    const filename = `luckcup-ledger-${month}.csv`;
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.send(`\uFEFF${lines.join('\n')}`);
+  } catch (e) {
+    console.error('[analysis/monthly-ledger-csv]', e);
+    res.status(500).json({ error: '导出失败' });
   }
 });
 
